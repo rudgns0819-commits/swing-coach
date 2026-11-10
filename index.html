@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1712" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>AI 스윙코치</title>
+  <script type="module" crossorigin src="./assets/index-DAff-rfu.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CXs_pKFY.css">
+</head>
+<body>
+  <header>
+    <h1>⛳ AI 스윙코치</h1>
+    <button id="btnSettings" class="icon" aria-label="설정">⚙️</button>
+  </header>
+
+  <div id="inapp" class="panel inapp hidden">
+    <b>⚠️ 카카오톡 안에서는 카메라·홈 화면 추가가 안 돼요</b>
+    <p>아래 버튼을 누르거나, 오른쪽 아래 <b>⋯(더보기)</b> → <b>'다른 브라우저로 열기'</b>(아이폰은 <b>Safari</b>)를 눌러주세요.</p>
+    <button id="inappOpen" class="primary">Safari(기본 브라우저)로 열기</button>
+  </div>
+
+  <div id="a2hs" class="panel a2hs hidden">
+    <b>📲 앱처럼 쓰기</b> — 아래쪽 <b>공유 버튼(⬆️)</b> → <b>'홈 화면에 추가'</b>를 누르면
+    홈 화면 아이콘으로 전체 화면 실행됩니다.
+    <button id="a2hsClose" class="icon" aria-label="닫기">✕</button>
+  </div>
+
+  <section id="settings" class="panel hidden">
+    <label>골퍼
+      <select id="hand"><option value="right">오른손잡이</option><option value="left">왼손잡이</option></select>
+    </label>
+    <label>촬영 방향
+      <select id="view"><option value="auto">자동 인식</option><option value="face">정면</option><option value="dtl">측면(타깃 뒤)</option></select>
+    </label>
+    <label>분석 정확도
+      <select id="model"><option value="auto">자동</option><option value="lite">빠름</option><option value="full">정확</option></select>
+    </label>
+    <label>불러온 영상 속도
+      <select id="slowmo">
+        <option value="1">일반 속도</option>
+        <option value="4">슬로모션 (120fps, 1/4배속)</option>
+        <option value="8">슬로모션 (240fps, 1/8배속)</option>
+      </select>
+    </label>
+    <label class="row"><input type="checkbox" id="voice" checked /> 음성 피드백</label>
+  </section>
+
+  <main>
+    <div id="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div id="phase" class="pill">시작 버튼을 눌러주세요</div>
+      <div id="guide" class="guide">
+        <p><b>촬영 방법</b></p>
+        <p>📱 휴대폰을 허리 높이에 세우고 2~3m 떨어진 곳에 두세요.</p>
+        <p>🧍 머리부터 발끝까지 화면에 모두 나와야 합니다.</p>
+        <p>↔️ 정면(가슴 쪽) 또는 측면(타깃 반대편 뒤쪽)에서 찍으세요.</p>
+        <p>⏸️ 어드레스 자세에서 1초 멈췄다가 스윙하면 자동으로 분석합니다.</p>
+      </div>
+      <div id="loading" class="loading hidden">AI 모델 불러오는 중...</div>
+      <div id="focusBadge" class="focus-badge hidden"></div>
+    </div>
+
+    <div class="controls">
+      <button id="btnCamera" class="primary">📷 실시간 분석 시작</button>
+      <label class="btn">🎞️ 영상 불러오기<input type="file" id="file" accept="video/*" hidden /></label>
+      <button id="btnFlip" class="hidden">🔄 카메라 전환</button>
+      <button id="btnStop" class="hidden">⏹ 중지</button>
+    </div>
+
+    <section id="report" class="panel hidden">
+      <div class="report-head">
+        <div id="score" class="score">--</div>
+        <div>
+          <div id="reportTitle" class="report-title">스윙 분석 결과</div>
+          <div id="reportSub" class="report-sub"></div>
+        </div>
+      </div>
+      <div id="focusResult" class="focus-result hidden"></div>
+      <div id="mainIssue" class="main-issue hidden"></div>
+      <div id="keyframes" class="keyframes"></div>
+    </section>
+
+    <section id="replay" class="panel hidden">
+      <div class="report-title">🎬 다시보기</div>
+      <div id="rstage" class="rstage">
+        <video id="rvideo" playsinline muted preload="auto"></video>
+        <canvas id="roverlay"></canvas>
+        <div id="rcaption" class="rcaption hidden"></div>
+      </div>
+      <input id="rseek" type="range" min="0" max="1000" value="0" aria-label="재생 위치" />
+      <div class="rrow">
+        <button id="rPrev" aria-label="이전 프레임">◀︎ 1프레임</button>
+        <button id="rPlay" class="primary">▶︎ 재생</button>
+        <button id="rNext" aria-label="다음 프레임">1프레임 ▶︎</button>
+      </div>
+      <div class="rrow chips" id="rSpeeds">
+        <span>속도</span>
+        <button data-rate="1">1x</button>
+        <button data-rate="0.5">1/2</button>
+        <button data-rate="0.25" class="on">1/4</button>
+        <button data-rate="0.1">1/10</button>
+      </div>
+      <div class="rrow chips" id="rKeys">
+        <span>장면</span>
+        <button data-key="address">어드레스</button>
+        <button data-key="top">탑</button>
+        <button data-key="impact">임팩트</button>
+        <button data-key="finish">피니시</button>
+      </div>
+      <div class="rrow opts">
+        <label><input type="checkbox" id="rSkel" checked /> 자세 선 표시</label>
+        <label><input type="checkbox" id="rLoop" checked /> 반복 재생</label>
+      </div>
+    </section>
+
+    <section id="detail" class="panel hidden">
+      <div class="report-title">항목별 진단 <span class="report-sub">(눌러서 문제 장면 보기)</span></div>
+      <ul id="items" class="items"></ul>
+    </section>
+
+    <section id="history" class="panel hidden">
+      <div class="report-title">📈 연습 기록</div>
+      <div id="historyStats" class="stats"></div>
+      <div class="report-sub">최근 스윙 점수</div>
+      <div id="historyBars" class="bars"></div>
+      <div id="habits" class="habits"></div>
+      <button id="historyClear" class="link">기록 지우기</button>
+    </section>
+  </main>
+
+  <footer>AI 분석은 참고용입니다. 카메라 영상은 기기 밖으로 전송되지 않습니다.</footer>
+</body>
+</html>
