@@ -9,14 +9,19 @@
   <link rel="apple-touch-icon" href="./icon-192.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>AI 스윙코치</title>
-  <script type="module" crossorigin src="./assets/index-CxM-FopT.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-CGxV2Xgf.css">
+  <script type="module" crossorigin src="./assets/index-BtoPsZsA.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-bKjjCsnU.css">
 </head>
 <body>
   <header>
     <h1>⛳ AI 스윙코치</h1>
     <button id="btnSettings" class="icon" aria-label="설정">⚙️</button>
   </header>
+  <nav class="tabs" id="tabs">
+    <button data-tab="swing" class="on">🏌️ 스윙 분석</button>
+    <button data-tab="field">⛳ 필드</button>
+    <button data-tab="records">🔒 내 기록</button>
+  </nav>
 
   <div id="inapp" class="panel inapp hidden">
     <b>⚠️ 카카오톡 안에서는 카메라·홈 화면 추가가 안 돼요</b>
@@ -47,10 +52,17 @@
         <option value="8">슬로모션 (240fps, 1/8배속)</option>
       </select>
     </label>
+    <label>예상 구질 클럽
+      <select id="club"><option value="driver">드라이버</option><option value="wood">우드</option><option value="iron7">7번 아이언</option><option value="wedge">웨지</option></select>
+    </label>
     <label class="row"><input type="checkbox" id="voice" checked /> 음성 피드백</label>
+    <label class="row"><input type="checkbox" id="beep" checked /> 어드레스 인식 때 '삑' 소리</label>
+    <label class="row"><input type="checkbox" id="autosave" checked /> 실시간 분석 스윙 영상을 휴대폰에 자동 저장</label>
+    <button id="pinBtn">🔒 내 기록 비밀번호 설정</button>
   </section>
 
   <main>
+   <div id="tabSwing">
     <div id="stage">
       <video id="video" playsinline muted></video>
       <canvas id="overlay"></canvas>
@@ -60,7 +72,7 @@
         <p>📱 휴대폰을 허리 높이에 세우고 2~3m 떨어진 곳에 두세요.</p>
         <p>🧍 머리부터 발끝까지 화면에 모두 나와야 합니다.</p>
         <p>↔️ 정면(가슴 쪽) 또는 측면(타깃 반대편 뒤쪽)에서 찍으세요.</p>
-        <p>⏸️ 어드레스 자세에서 1초 멈췄다가 스윙하면 자동으로 분석합니다.</p>
+        <p>⏸️ 어드레스 자세를 잡고 잠깐 멈추면 자동 인식('삑'), 바로 스윙하세요.</p>
       </div>
       <div id="loading" class="loading hidden">AI 모델 불러오는 중...</div>
       <div id="focusBadge" class="focus-badge hidden"></div>
@@ -85,6 +97,21 @@
       <div id="focusResult" class="focus-result hidden"></div>
       <div id="mainIssue" class="main-issue hidden"></div>
       <div id="keyframes" class="keyframes"></div>
+    </section>
+
+    <section id="shot" class="panel hidden">
+      <div class="report-title">🏌️ 예상 구질 <span class="report-sub">(자세로 추정 · 실제 공 추적 아님)</span></div>
+      <canvas id="flight" class="flight"></canvas>
+      <div class="shot-row">
+        <div><b id="shotShape">-</b><div class="report-sub" id="shotSub"></div></div>
+        <button id="shotAgain" class="mini">↻ 다시</button>
+      </div>
+      <div class="rrow chips" id="shotClubs">
+        <span>클럽</span>
+        <button data-club="driver">드라이버</button><button data-club="wood">우드</button>
+        <button data-club="iron7">7번</button><button data-club="wedge">웨지</button>
+      </div>
+      <div id="shotWhy" class="report-sub"></div>
     </section>
 
     <section id="replay" class="panel hidden">
@@ -125,16 +152,87 @@
       <ul id="items" class="items"></ul>
     </section>
 
-    <section id="history" class="panel hidden">
-      <div class="report-title">📈 연습 기록</div>
-      <div id="historyStats" class="stats"></div>
-      <div class="report-sub">최근 스윙 점수</div>
-      <div id="historyBars" class="bars"></div>
-      <div id="habits" class="habits"></div>
-      <button id="historyClear" class="link">기록 지우기</button>
+
+   </div>
+
+   <div id="tabRecords" class="hidden">
+    <section id="lockBox" class="panel hidden lockbox">
+      <div class="report-title">🔒 잠겨 있어요</div>
+      <p class="report-sub">내 기록을 보려면 비밀번호를 입력하세요.</p>
+      <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="비밀번호" />
+      <button id="pinOk" class="primary">열기</button>
     </section>
+    <div id="recordsBody">
+      <div class="panel privacy">
+        🔐 <b>기록은 이 휴대폰 안에만 저장됩니다.</b> 서버로 전송되지 않아 같은 링크를 연 다른 사람은 볼 수 없어요.
+        <span class="report-sub">아이폰은 홈 화면에 추가해서 쓰면 기록이 지워지지 않고 오래 보관됩니다.</span>
+      </div>
+      <section id="library" class="panel">
+        <div class="report-title">🎥 내 스윙 영상 <span id="libCount" class="report-sub"></span></div>
+        <p class="report-sub">실시간 분석에서 찍힌 스윙이 자동 저장됩니다. 📲를 누르면 사진 앱(갤러리)에 저장돼요.</p>
+        <ul id="libList" class="lib"></ul>
+      </section>
+      <section id="history" class="panel hidden">
+        <div class="report-title">📈 연습 기록</div>
+        <div id="historyStats" class="stats"></div>
+        <div class="report-sub">최근 스윙 점수</div>
+        <div id="historyBars" class="bars"></div>
+        <div id="habits" class="habits"></div>
+        <button id="historyClear" class="link">기록 지우기</button>
+      </section>
+    </div>
+   </div>
+
+   <div id="tabField" class="hidden">
+    <section class="panel">
+      <div class="shot-row"><b id="courseName">골프장을 선택하세요</b><button id="fCourses" class="mini">⛳ 골프장 선택</button></div>
+      <div id="courseBox" class="hidden coursebox">
+        <div class="rrow"><button id="fNearby">📍 주변 골프장 찾기</button><button id="fNew">✏️ 직접 만들기</button></div>
+        <div class="rrow"><input id="fSearch" placeholder="골프장 이름으로 찾기" /><button id="fSearchBtn" class="mini">검색</button></div>
+        <ul id="courseList" class="clist"></ul>
+      </div>
+      <div class="holebar">
+        <button id="hPrev" aria-label="이전 홀">◀</button>
+        <div><b id="holeNo">-</b><span id="holePar"></span></div>
+        <button id="hNext" aria-label="다음 홀">▶</button>
+      </div>
+      <label class="row small"><input type="checkbox" id="hAuto" checked /> 내 위치로 홀 자동 선택</label>
+    </section>
+
+    <section class="panel dist">
+      <div class="report-sub" id="dNote">그린 중앙까지</div>
+      <div class="dmain"><span id="dCenter">---</span><small>m</small></div>
+      <div class="dsub">앞 <b id="dFront">-</b>m · 뒤 <b id="dBack">-</b>m</div>
+      <div class="report-sub" id="gpsAcc">위치 찾는 중...</div>
+    </section>
+
+    <section class="panel dirbox">
+      <div id="arrow" class="arrow">⬆︎</div>
+      <div class="dirtext"><b id="dirText">그린 방향 확인</b><div class="report-sub" id="dirSub">나침반을 켜면 그린이 어느 쪽인지 알려드려요</div></div>
+      <button id="dirOn">🧭 켜기</button>
+    </section>
+
+    <div id="map" class="map"></div>
+    <div id="tapInfo" class="report-sub tapinfo">지도를 누르면 그 지점까지 거리가 나와요.</div>
+    <div class="rrow"><button id="setGreenTap">📍 지도에서 그린 지정</button><button id="setGreenHere">🧍 여기를 그린으로</button></div>
+
+    <section class="panel">
+      <div class="report-title">⛰️ 라이(경사) 확인</div>
+      <p class="report-sub">휴대폰을 공 옆 바닥에 화면이 위로 오게 눕히고, 휴대폰 윗부분이 타깃(그린) 쪽을 향하게 두세요.</p>
+      <div id="lieView" class="hidden lieview">
+        <div class="level"><i id="bubble"></i><span class="lv-t">타깃</span></div>
+        <div>
+          <div class="lie-label" id="lieLabel">-</div>
+          <div class="report-sub" id="lieNums"></div>
+        </div>
+      </div>
+      <div id="lieWarn" class="report-sub hidden">⚠️ 휴대폰을 바닥에 평평하게 눕혀주세요</div>
+      <div id="lieAdvice" class="lie-advice"></div>
+      <button id="lieStart" class="primary">라이 측정 시작</button>
+    </section>
+   </div>
   </main>
 
-  <footer>AI 분석은 참고용입니다. 카메라 영상은 기기 밖으로 전송되지 않습니다.</footer>
+  <footer>AI 분석·예상 구질·거리는 참고용입니다. 영상과 기록은 이 휴대폰 밖으로 전송되지 않습니다.<br>위성지도 © Esri · 코스 데이터 © OpenStreetMap 기여자</footer>
 </body>
 </html>
